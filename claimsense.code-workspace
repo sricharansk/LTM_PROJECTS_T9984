@@ -1,0 +1,194 @@
+{
+  "folders": [
+    {
+      "name": "ClaimSense – RAG Insurance Adjudication",
+      "path": "."
+    }
+  ],
+  "settings": {
+    // ── Python Interpreter ────────────────────────────────────
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
+
+    // ── Linting & Formatting ──────────────────────────────────
+    "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true,
+      "editor.codeActionsOnSave": {
+        "source.organizeImports": "explicit"
+      }
+    },
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": false,
+    "python.linting.flake8Enabled": true,
+    "python.linting.flake8Args": ["--max-line-length=120"],
+    "black-formatter.args": ["--line-length", "120"],
+    "isort.args": ["--profile", "black"],
+
+    // ── Editor ────────────────────────────────────────────────
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.rulers": [120],
+    "editor.renderWhitespace": "boundary",
+    "files.trimTrailingWhitespace": true,
+    "files.insertFinalNewline": true,
+
+    // ── File Associations ─────────────────────────────────────
+    "files.associations": {
+      "*.env.example": "dotenv",
+      "*.env": "dotenv"
+    },
+
+    // ── Explorer – Hide noise ─────────────────────────────────
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true,
+      "**/.pytest_cache": true,
+      "**/.mypy_cache": true,
+      ".venv": true
+    },
+
+    // ── Testing ───────────────────────────────────────────────
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": ["tests"],
+    "python.testing.unittestEnabled": false,
+
+    // ── Terminal ──────────────────────────────────────────────
+    "terminal.integrated.defaultProfile.windows": "PowerShell",
+    "terminal.integrated.env.windows": {
+      "PYTHONPATH": "${workspaceFolder}"
+    },
+
+    // ── Jupyter ───────────────────────────────────────────────
+    "jupyter.notebookFileRoot": "${workspaceFolder}/notebooks",
+
+    // ── Env file ──────────────────────────────────────────────
+    "python.envFile": "${workspaceFolder}/.env"
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.black-formatter",
+      "ms-python.isort",
+      "ms-python.vscode-pylance",
+      "ms-toolsai.jupyter",
+      "ms-azuretools.vscode-docker",
+      "ms-vscode.azure-account",
+      "mtxr.sqltools",
+      "mtxr.sqltools-driver-pg",
+      "mikestead.dotenv",
+      "redhat.vscode-yaml",
+      "eamodio.gitlens",
+      "mhutchie.git-graph",
+      "streetsidesoftware.code-spell-checker"
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "FastAPI – ClaimSense API",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "uvicorn",
+        "args": [
+          "src.api.main:app",
+          "--host", "0.0.0.0",
+          "--port", "8080",
+          "--reload"
+        ],
+        "jinja": true,
+        "envFile": "${workspaceFolder}/.env"
+      },
+      {
+        "name": "Streamlit – ClaimSense Dashboard",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "streamlit",
+        "args": [
+          "run",
+          "src/dashboard/app.py",
+          "--server.port", "8501"
+        ],
+        "envFile": "${workspaceFolder}/.env"
+      },
+      {
+        "name": "MLflow – Tracking Server",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "mlflow",
+        "args": ["server", "--host", "0.0.0.0", "--port", "5000"]
+      },
+      {
+        "name": "Python – Current File",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${file}",
+        "console": "integratedTerminal",
+        "envFile": "${workspaceFolder}/.env"
+      }
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Setup: Create Virtual Environment",
+        "type": "shell",
+        "command": "python -m venv .venv && .venv\\Scripts\\activate && python -m pip install --upgrade pip && pip install -r requirements.txt",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Run: FastAPI Server",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && uvicorn src.api.main:app --host 0.0.0.0 --port 8080 --reload",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Run: Streamlit Dashboard",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && streamlit run src/dashboard/app.py",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Run: MLflow Tracking Server",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && mlflow server --host 0.0.0.0 --port 5000",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Run: Tests",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && pytest tests/ -v",
+        "group": "test",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "Data: Generate Synthetic Dataset",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && python src/data/generate_synthetic_data.py",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "ML: Train Fraud Classifier",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && python src/ml/train_classifier.py",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      },
+      {
+        "label": "RAG: Build Knowledge Base",
+        "type": "shell",
+        "command": ".venv\\Scripts\\activate && python src/rag/build_knowledge_base.py",
+        "group": "build",
+        "presentation": { "reveal": "always", "panel": "new" }
+      }
+    ]
+  }
+}

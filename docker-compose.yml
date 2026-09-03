@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: claimsense-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-claimsense_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-claimsense_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-claimsense_user}"]
+      interval: 10s
+      retries: 5
+
+  # ── ChromaDB (Vector Store) ─────────────────────────────────
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: claimsense-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+
+  # ── MLflow Tracking Server ──────────────────────────────────
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.22.1
+    container_name: claimsense-mlflow
+    ports:
+      - "5000:5000"
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://${DB_USER:-claimsense_user}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-claimsense_db}
+      --default-artifact-root /mlartifacts
+      --host 0.0.0.0
+      --port 5000
+    volumes:
+      - mlflow_artifacts:/mlartifacts
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ── FastAPI Backend ─────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    container_name: claimsense-api
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER:-claimsense_user}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-claimsense_db}
+      - CHROMA_HOST=chromadb
+      - CHROMA_PORT=8000
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      chromadb:
+        condition: service_started
+    volumes:
+      - ./src:/app/src
+    command: uvicorn src.api.main:app --host 0.0.0.0 --port 8080 --reload
+
+  # ── Streamlit Dashboard ─────────────────────────────────────
+  dashboard:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile
+    container_name: claimsense-dashboard
+    ports:
+      - "8501:8501"
+    env_file:
+      - .env
+    depends_on:
+      - api
+    volumes:
+      - ./src:/app/src
+    command: streamlit run src/dashboard/app.py --server.port 8501 --server.address 0.0.0.0
+
+volumes:
+  postgres_data:
+  chroma_data:
+  mlflow_artifacts:
